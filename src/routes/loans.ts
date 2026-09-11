@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import db from '../db/database';
-import { calculateDueDate } from '../validators';
+import { calculateDueDate, checkRenewalEligibility } from '../validators';
 
 const router = Router();
 
@@ -95,6 +95,55 @@ router.post('/return', (req: Request, res: Response) => {
   db.prepare('UPDATE books SET is_available = 1 WHERE id = ?').run(loan.book_id);
 
   res.status(200).json({ message: 'Book returned successfully' });
+});
+
+// POST /api/loans/renew — renews an active loan (KAN-6). Looks up the
+// active loan, runs the renewal eligibility check (max renewals /
+// overdue), and on success extends due_date by the standard 14-day
+// period and increments renewal_count. Follows the same request/error
+// pattern as POST /return.
+router.post('/renew', (req: Request, res: Response) => {
+  try {
+    const { loan_id } = req.body as { loan_id?: number };
+    if (!loan_id) {
+      res.status(400).json({ error: 'loan_id is required' });
+      return;
+    }
+
+    const loan = db.prepare(
+      'SELECT * FROM loans WHERE id = ? AND returned_date IS NULL'
+    ).get(loan_id) as
+      | { id: number; due_date: string; renewal_count: number; returned_date: string | null }
+      | undefined;
+    if (!loan) {
+      res.status(404).json({ error: 'Active loan not found' });
+      return;
+    }
+
+    const eligibility = checkRenewalEligibility(loan);
+    if (!eligibility.eligible) {
+      const message = eligibility.reason === 'MAX_RENEWALS_REACHED'
+        ? 'Maximum renewals (2) reached for this loan'
+        : 'Cannot renew an overdue loan';
+      res.status(400).json({ error: message });
+      return;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const newDueDate = calculateDueDate(today);
+    db.prepare(
+      'UPDATE loans SET due_date = ?, renewal_count = renewal_count + 1 WHERE id = ?'
+    ).run(newDueDate, loan_id);
+
+    res.status(200).json({
+      message: 'Loan renewed successfully',
+      due_date: newDueDate,
+      renewal_count: loan.renewal_count + 1,
+    });
+  } catch (err) {
+    console.error('Failed to renew loan:', err);
+    res.status(500).json({ error: 'Failed to renew loan' });
+  }
 });
 
 export default router;

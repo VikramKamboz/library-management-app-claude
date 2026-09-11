@@ -45,6 +45,13 @@ export function initializeDatabase(): void {
     db.exec('ALTER TABLE loans ADD COLUMN due_date TEXT');
   }
 
+  // KAN-6: add renewal_count column if not present, to track how many
+  // times a loan has been renewed (default 0). Guarded the same way
+  // as the due_date migration above so it is safe to run repeatedly.
+  if (!loanColumns.some(col => col.name === 'renewal_count')) {
+    db.exec('ALTER TABLE loans ADD COLUMN renewal_count INTEGER NOT NULL DEFAULT 0');
+  }
+
   // KAN-29: add unique index on books.isbn (skip if duplicates exist)
   const duplicates = db.prepare(
     'SELECT isbn FROM books GROUP BY isbn HAVING COUNT(*) > 1'
