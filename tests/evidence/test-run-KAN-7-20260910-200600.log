@@ -1,0 +1,27 @@
+Test Execution Evidence Log
+============================
+Story ID: KAN-7 — View overdue loans list
+Timestamp: 2026-09-10T20:06:00+05:30
+Reported by: human (manual local execution)
+
+Test Source: VikramKamboz/library-management-playwright, PR #5
+Feature file: features/library-KAN-7.feature (5 Gherkin scenarios)
+Scenarios covered:
+  1. Overdue-only filtering shows only overdue loans (AC1)
+  2. Overdue loan row displays all required fields (AC2)
+  3. Empty state message shown when there are no overdue loans (AC3)
+  4. A loan due exactly today is not treated as overdue (boundary)
+  5. Existing tabs continue to function unaffected by the Overdue Loans view (regression)
+
+Application under test: http://localhost:5050 (GET /api/loans/overdue)
+
+Reported Counts:
+  Passed:  5
+  Failed:  0
+  Skipped: 0
+  Total:   5
+
+Notes:
+  None provided by human beyond the reported pass/fail counts.
+
+Status: PASSED (0 failures)

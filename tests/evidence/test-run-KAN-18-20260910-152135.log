@@ -1,0 +1,28 @@
+Test Execution Evidence Log
+============================
+Story ID: KAN-18 — Filter/sort books by availability and author
+Timestamp: 2026-09-10T15:21:35+05:30
+Reported by: human (manual local execution)
+
+Test Source: VikramKamboz/library-management-playwright, PR #4
+Feature file: features/library-KAN-18.feature (5 happy-path Gherkin scenarios)
+Scenarios covered:
+  1. Filter books by availability
+  2. Sort books by title/author
+  3. Combined filter + sort
+  4. Pagination with filter/sort applied
+  5. Reset filters restores default view
+
+Application under test: http://localhost:5050 (GET /api/books)
+
+Reported Counts:
+  Passed:  5
+  Failed:  0
+  Skipped: 0
+  Total:   5
+
+Notes:
+  Edge cases and regression tests were explicitly out of scope for this
+  batch, per human confirmation at Stage 8 (Test Generation).
+
+Status: PASSED (0 failures)
