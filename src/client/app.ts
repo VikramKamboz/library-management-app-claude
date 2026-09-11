@@ -307,7 +307,10 @@ async function loadLoans(): Promise<void> {
             <td>${escapeHtml(l.name)}</td>
             <td>${escapeHtml(l.issued_date)}</td>
             <td>${l.due_date ? escapeHtml(l.due_date) : '—'}</td>
-            <td><button class="return-btn" data-loan-id="${l.id}">Return</button></td>
+            <td>
+              <button class="return-btn" data-loan-id="${l.id}">Return</button>
+              <button class="renew-btn" data-loan-id="${l.id}">Renew</button>
+            </td>
           </tr>
         `).join('')}
       </tbody>
@@ -467,22 +470,62 @@ function initForms(): void {
 
   (document.getElementById('loans-list') as HTMLDivElement).addEventListener('click', async (e) => {
     const target = e.target as HTMLElement;
-    if (!target.classList.contains('return-btn')) return;
-    const loanId = parseInt(target.dataset.loanId as string);
 
-    const res = await fetch('/api/loans/return', {
+    if (target.classList.contains('return-btn')) {
+      const loanId = parseInt(target.dataset.loanId as string);
+
+      const res = await fetch('/api/loans/return', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ loan_id: loanId })
+      });
+      if (res.ok) {
+        showMessage('Book returned successfully.');
+        loadLoans();
+      } else {
+        const err = await res.json() as { error: string };
+        showMessage(err.error || 'Failed to return book.', true);
+      }
+      return;
+    }
+
+    if (target.classList.contains('renew-btn')) {
+      await onRenewLoanClick(target);
+    }
+  });
+}
+
+/**
+ * Handles a click on a loan row's "Renew" button (KAN-6): calls the
+ * renewal endpoint for the clicked loan, shows the new due date on
+ * success, or the specific blocking message (max renewals / overdue)
+ * returned by the API on failure, then refreshes the loans list.
+ */
+async function onRenewLoanClick(target: HTMLElement): Promise<void> {
+  try {
+    const loanId = parseInt(target.dataset.loanId as string);
+    if (!loanId) {
+      showMessage('Unable to determine which loan to renew.', true);
+      return;
+    }
+
+    const res = await fetch('/api/loans/renew', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ loan_id: loanId })
     });
     if (res.ok) {
-      showMessage('Book returned successfully.');
+      const data = await res.json() as { message: string; due_date: string; renewal_count: number };
+      showMessage(`Loan renewed successfully. New due date: ${data.due_date}`);
       loadLoans();
     } else {
       const err = await res.json() as { error: string };
-      showMessage(err.error || 'Failed to return book.', true);
+      showMessage(err.error || 'Failed to renew loan.', true);
     }
-  });
+  } catch (err) {
+    console.error('Failed to renew loan:', err);
+    showMessage('Failed to renew loan.', true);
+  }
 }
 
 function initBooksControls(): void {
